@@ -1,0 +1,9 @@
+transformers
+diffusers
+torch
+peft
+streamlit
+diffusers
+safetensors
+bitsandbytes
+torchvision
