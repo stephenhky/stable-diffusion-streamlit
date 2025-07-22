@@ -37,7 +37,7 @@ def generate_image(
         steps: int=30,
         guidance_scale: float=7.5,
         seed: int=None
-) -> list[PIL.Image.Image]:
+) -> list[PIL.Image]:
     if seed is None:
         generator = None
     else:
