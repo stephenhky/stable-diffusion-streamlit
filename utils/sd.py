@@ -3,11 +3,13 @@ import PIL
 
 import torch
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+from safetensors.torch import load_file
 
 
 def get_stable_diffusion_pipeline(
         base_model_id: str,
         lora_weights_path: str,
+        vae_input_path: str,
         cuda: bool = True
 ) -> StableDiffusionPipeline:
     pipe = StableDiffusionPipeline.from_pretrained(
@@ -18,7 +20,11 @@ def get_stable_diffusion_pipeline(
     if cuda and torch.cuda.is_available():
         pipe = pipe.to("cuda")
     pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
-    pipe.load_lora_weights(lora_weights_path, weight_name="pytorch_lora_weights.safetensors")
+    if (vae_input_path is not None) and (len(vae_input_path) > 0):
+        vae_weights = load_file(vae_input_path)
+        pipe.vae.load_state_dict(vae_weights, strict=False)
+    if (lora_weights_path is not None) and (len(lora_weights_path) > 0):
+        pipe.load_lora_weights(lora_weights_path, weight_name="pytorch_lora_weights.safetensors")
     return pipe
 
 
