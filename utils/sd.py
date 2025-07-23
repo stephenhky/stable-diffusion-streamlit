@@ -1,6 +1,6 @@
 
 import PIL
-from typing import Union
+from typing import Union, Literal
 from os import PathLike
 
 import torch
@@ -9,7 +9,7 @@ from safetensors.torch import load_file
 
 
 def get_stable_diffusion_pipeline(
-        base_model_id: str,
+        base_model_id: Literal["runwayml/stable-diffusion-v1-5", "stabilityai/stable-diffusion-xl-base-1.0"],
         lora_weights_path: str,
         vae_input_path: Union[PathLike, str],
         cuda: bool = True
