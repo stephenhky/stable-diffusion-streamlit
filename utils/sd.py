@@ -1,11 +1,15 @@
 
 import PIL
 from typing import Union, Literal
+import os
 from os import PathLike
+from pathlib import Path
 
 import torch
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
 from safetensors.torch import load_file
+
+from .schemas import StableDiffusionOutput
 
 
 def get_stable_diffusion_pipeline(
@@ -57,3 +61,63 @@ def generate_image(
     )
 
     return sd_output.images
+
+
+class SDImageGenerator:
+    def __init__(
+            self,
+            base_model_id: str,
+            lora_weight_path: Union[PathLike, str],
+            vae_weight_path: Union[PathLike, str],
+            cuda: bool=True
+    ):
+        self._base_model_id = base_model_id
+        if isinstance(lora_weight_path, Path):
+            self._lora_file_name = lora_weight_path.name
+            lora_weight_path = lora_weight_path.as_posix()
+        else:
+            self._lora_file_name = os.path.basename(lora_weight_path)
+        if isinstance(vae_weight_path, str):
+            vae_weight_path = Path(vae_weight_path)
+        self._vae_file_name = vae_weight_path.name
+
+        self._pipe = get_stable_diffusion_pipeline(
+            self._base_model_id,
+            lora_weight_path,
+            vae_weight_path,
+            cuda=cuda
+        )
+
+    def generate_images(
+            self,
+            positive_prompt: str,
+            negative_prompt: str,
+            height: int = 512,
+            width: int = 512,
+            steps: int = 30,
+            guidance_scale: float = 7.5,
+            seed: int = None
+    ) -> StableDiffusionOutput:
+        images = generate_image(
+            positive_prompt,
+            negative_prompt,
+            self._pipe,
+            height=height,
+            width=width,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            seed=seed
+        )
+        return StableDiffusionOutput(
+            base_model_id=self._base_model_id,
+            lora_file_name=self._lora_file_name,
+            vae_file_name=self._vae_file_name,
+            positive_prompt=positive_prompt,
+            negative_prompt=negative_prompt,
+            height=height,
+            width=width,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            seed=seed,
+            images=images
+        )
