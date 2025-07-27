@@ -1,12 +1,10 @@
 
 from PIL import Image
+from dataclasses import dataclass
 
-from pydantic import BaseModel, ConfigDict
 
-
-class StableDiffusionOutput(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
+@dataclass
+class StableDiffusionOutput:
     base_model_id: str
     lora_file_name: str
     vae_file_name: str

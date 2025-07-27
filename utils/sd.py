@@ -16,7 +16,7 @@ def get_stable_diffusion_pipeline(
         base_model_id: Literal["runwayml/stable-diffusion-v1-5", "stabilityai/stable-diffusion-xl-base-1.0"],
         lora_weights_path: str,
         vae_input_path: Union[PathLike, str],
-        cuda: bool = True
+        cuda: bool = True     # quite impractical without CUDA
 ) -> StableDiffusionPipeline:
     pipe = StableDiffusionPipeline.from_pretrained(
         base_model_id,
@@ -26,7 +26,7 @@ def get_stable_diffusion_pipeline(
     if cuda and torch.cuda.is_available():
         pipe = pipe.to("cuda")
     pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
-    if (vae_input_path is not None) and (len(vae_input_path) > 0):
+    if (vae_input_path is not None) and (len(vae_input_path if isinstance(vae_input_path, str) else vae_input_path.as_posix()) > 0):
         vae_weights = load_file(vae_input_path)
         pipe.vae.load_state_dict(vae_weights, strict=False)
     if (lora_weights_path is not None) and (len(lora_weights_path) > 0):
@@ -67,19 +67,25 @@ class SDImageGenerator:
     def __init__(
             self,
             base_model_id: str,
-            lora_weight_path: Union[PathLike, str],
-            vae_weight_path: Union[PathLike, str],
+            lora_weight_path: Union[PathLike, str, None],
+            vae_weight_path: Union[PathLike, str, None],
             cuda: bool=True
     ):
         self._base_model_id = base_model_id
         if isinstance(lora_weight_path, Path):
             self._lora_file_name = lora_weight_path.name
             lora_weight_path = lora_weight_path.as_posix()
-        else:
+        elif isinstance(lora_weight_path, str):
             self._lora_file_name = os.path.basename(lora_weight_path)
+        else:
+            self._lora_file_name = None
         if isinstance(vae_weight_path, str):
             vae_weight_path = Path(vae_weight_path)
-        self._vae_file_name = vae_weight_path.name
+            self._vae_file_name = vae_weight_path.name
+        elif isinstance(vae_weight_path, Path):
+            self._vae_file_name = vae_weight_path.name
+        else:
+            self._vae_file_name = None
 
         self._pipe = get_stable_diffusion_pipeline(
             self._base_model_id,

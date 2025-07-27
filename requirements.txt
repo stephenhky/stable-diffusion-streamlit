@@ -7,4 +7,3 @@ diffusers
 safetensors
 bitsandbytes
 torchvision
-pydantic
