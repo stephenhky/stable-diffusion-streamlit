@@ -4,10 +4,12 @@ from typing import Union, Literal
 import os
 from os import PathLike
 from pathlib import Path
+import warnings
 
 import torch
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
 from safetensors.torch import load_file
+from transformers import AutoModel, AutoTokenizer
 
 from .schemas import StableDiffusionOutput
 
@@ -16,13 +18,28 @@ def get_stable_diffusion_pipeline(
         base_model_id: Literal["runwayml/stable-diffusion-v1-5", "stabilityai/stable-diffusion-xl-base-1.0"],
         lora_weights_path: str,
         vae_input_path: Union[PathLike, str],
-        cuda: bool = True     # quite impractical without CUDA
+        cuda: bool = True,     # quite impractical without CUDA
+        text_encoder_id: Union[str, None]=None,
+        tokenizer_id: Union[str, None]=None
 ) -> StableDiffusionPipeline:
-    pipe = StableDiffusionPipeline.from_pretrained(
-        base_model_id,
-        torch_dtype=torch.float16,
-        safety_checker=None,  # Disable for freedom
-    )
+    if text_encoder_id is not None and tokenizer_id is not None:
+        text_encoder = AutoModel.from_pretrained(text_encoder_id)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
+        pipe = StableDiffusionPipeline.from_pretrained(
+            base_model_id,
+            torch_dtype=torch.float16,
+            text_encoder=text_encoder,
+            tokenizer=tokenizer,
+            safety_checker=None,  # Disable for freedom
+        )
+    else:
+        pipe = StableDiffusionPipeline.from_pretrained(
+            base_model_id,
+            torch_dtype=torch.float16,
+            safety_checker=None,  # Disable for freedom
+        )
+        if (text_encoder_id is not None) ^ (tokenizer_id is not None):
+            warnings.warn("You must give `text_encoder_id` and `tokenizer_id` a value or both None! Now it is assumed both are None!")
     if cuda and torch.cuda.is_available():
         pipe = pipe.to("cuda")
     pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
@@ -66,9 +83,11 @@ def generate_image(
 class SDImageGenerator:
     def __init__(
             self,
-            base_model_id: str,
+            base_model_id: Literal["runwayml/stable-diffusion-v1-5", "stabilityai/stable-diffusion-xl-base-1.0"],
             lora_weight_path: Union[PathLike, str, None],
             vae_weight_path: Union[PathLike, str, None],
+            text_encoder_id: Union[str, None]=None,
+            tokenizer_id: Union[str, None]=None,
             cuda: bool=True
     ):
         self._base_model_id = base_model_id
@@ -91,6 +110,8 @@ class SDImageGenerator:
             self._base_model_id,
             lora_weight_path,
             vae_weight_path,
+            text_encoder_id=text_encoder_id,
+            tokenizer_id=tokenizer_id,
             cuda=cuda
         )
 
