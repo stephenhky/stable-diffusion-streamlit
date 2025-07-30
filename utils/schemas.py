@@ -15,4 +15,4 @@ class StableDiffusionOutput:
     steps: int
     guidance_scale: float
     seed: int
-    images: list[Image]
+    images: list[Image.Image]
