@@ -7,3 +7,4 @@ diffusers
 safetensors
 bitsandbytes
 torchvision
+compel

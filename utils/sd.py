@@ -10,6 +10,7 @@ import torch
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
 from safetensors.torch import load_file
 from transformers import AutoModel, AutoTokenizer
+from compel import Compel
 
 from .schemas import StableDiffusionOutput
 
@@ -66,9 +67,16 @@ def generate_image(
     else:
         generator = torch.Generator("cuda").manual_seed(seed)
 
+    # conditioning embedding
+    compel = Compel(tokenizer=stable_diffusion_pipeline.tokenizer, text_encoder=stable_diffusion_pipeline.text_encoder)
+    positive_prompt_embeds = compel(positive_prompt)
+    negative_prompt_embeds = compel(negative_prompt)
+
     sd_output = stable_diffusion_pipeline(
-        prompt=positive_prompt,
-        negative_prompt=negative_prompt,
+        # prompt=positive_prompt,
+        # negative_prompt=negative_prompt,
+        prompt_embeds=positive_prompt_embeds,
+        negative_prompt_embeds=negative_prompt_embeds,
         height=height,
         width=width,
         num_inference_steps=steps,
@@ -123,18 +131,22 @@ class SDImageGenerator:
             width: int = 512,
             steps: int = 30,
             guidance_scale: float = 7.5,
-            seed: int = None
+            seed: int = None,
+            nbimages: int = 1
     ) -> StableDiffusionOutput:
-        images = generate_image(
-            positive_prompt,
-            negative_prompt,
-            self._pipe,
-            height=height,
-            width=width,
-            steps=steps,
-            guidance_scale=guidance_scale,
-            seed=seed
-        )
+        images = [
+            generate_image(
+              positive_prompt,
+              negative_prompt,
+              self._pipe,
+              height=height,
+              width=width,
+              steps=steps,
+              guidance_scale=guidance_scale,
+              seed=seed
+          )[0]
+          for _ in range(nbimages)
+        ]
         return StableDiffusionOutput(
             base_model_id=self._base_model_id,
             lora_file_name=self._lora_file_name,
