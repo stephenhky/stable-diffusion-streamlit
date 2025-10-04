@@ -1,6 +1,6 @@
 
 import PIL
-from typing import Union, Literal
+from typing import Union, Literal, Optional
 import os
 from os import PathLike
 from pathlib import Path
@@ -20,8 +20,8 @@ def get_stable_diffusion_pipeline(
         lora_weights_path: str,
         vae_input_path: Union[PathLike, str],
         cuda: bool = True,     # quite impractical without CUDA
-        text_encoder_id: Union[str, None]=None,
-        tokenizer_id: Union[str, None]=None
+        text_encoder_id: Optional[str] = None,
+        tokenizer_id: Optional[str] = None
 ) -> StableDiffusionPipeline:
     if text_encoder_id is not None and tokenizer_id is not None:
         text_encoder = AutoModel.from_pretrained(text_encoder_id)
@@ -56,11 +56,11 @@ def generate_image(
         positive_prompt: str,
         negative_prompt: str,
         stable_diffusion_pipeline: StableDiffusionPipeline,
-        height: int=512,
-        width: int=512,
-        steps: int=30,
-        guidance_scale: float=7.5,
-        seed: int=None
+        height: int = 512,
+        width: int = 512,
+        steps: int = 30,
+        guidance_scale: float = 7.5,
+        seed: Optional[int] = None
 ) -> list[PIL.Image]:
     if seed is None:
         generator = None
@@ -92,10 +92,10 @@ class SDImageGenerator:
     def __init__(
             self,
             base_model_id: Literal["runwayml/stable-diffusion-v1-5", "stabilityai/stable-diffusion-xl-base-1.0"],
-            lora_weight_path: Union[PathLike, str, None],
-            vae_weight_path: Union[PathLike, str, None],
-            text_encoder_id: Union[str, None]=None,
-            tokenizer_id: Union[str, None]=None,
+            lora_weight_path: Optional[Union[PathLike, str]],
+            vae_weight_path: Optional[Union[PathLike, str]],
+            text_encoder_id: Optional[str] = None,
+            tokenizer_id: Optional[str] = None,
             cuda: bool=True
     ):
         self._base_model_id = base_model_id
@@ -131,7 +131,7 @@ class SDImageGenerator:
             width: int = 512,
             steps: int = 30,
             guidance_scale: float = 7.5,
-            seed: int = None,
+            seed: Optional[int] = None,
             nbimages: int = 1
     ) -> StableDiffusionOutput:
         images = [
