@@ -7,7 +7,7 @@ from pathlib import Path
 import warnings
 
 import torch
-from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+from diffusers import StableDiffusionPipeline, EulerDiscreteScheduler
 from safetensors.torch import load_file
 from transformers import AutoModel, AutoTokenizer
 from compel import Compel
@@ -17,11 +17,12 @@ from .schemas import StableDiffusionOutput
 
 def get_stable_diffusion_pipeline(
         base_model_id: Literal["runwayml/stable-diffusion-v1-5", "stabilityai/stable-diffusion-xl-base-1.0"],
-        lora_weights_path: str,
-        vae_input_path: Union[PathLike, str],
+        lora_weights_path: Optional[Union[PathLike, str]],
+        vae_input_path: Optional[Union[PathLike, str]],
         cuda: bool = True,     # quite impractical without CUDA
         text_encoder_id: Optional[str] = None,
-        tokenizer_id: Optional[str] = None
+        tokenizer_id: Optional[str] = None,
+        text_inversion_embedding_path: Optional[Union[PathLike, str]] = None
 ) -> StableDiffusionPipeline:
     if text_encoder_id is not None and tokenizer_id is not None:
         text_encoder = AutoModel.from_pretrained(text_encoder_id)
@@ -43,12 +44,14 @@ def get_stable_diffusion_pipeline(
             warnings.warn("You must give `text_encoder_id` and `tokenizer_id` a value or both None! Now it is assumed both are None!")
     if cuda and torch.cuda.is_available():
         pipe = pipe.to("cuda")
-    pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
+    pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config)
     if (vae_input_path is not None) and (len(vae_input_path if isinstance(vae_input_path, str) else vae_input_path.as_posix()) > 0):
         vae_weights = load_file(vae_input_path)
         pipe.vae.load_state_dict(vae_weights, strict=False)
     if (lora_weights_path is not None) and (len(lora_weights_path) > 0):
         pipe.load_lora_weights(lora_weights_path, weight_name="pytorch_lora_weights.safetensors")
+    if text_inversion_embedding_path is not None:
+        pipe.load_textual_inversion(text_inversion_embedding_path, token='ng_deepnegative_v1_75t')
     return pipe
 
 
@@ -96,7 +99,8 @@ class SDImageGenerator:
             vae_weight_path: Optional[Union[PathLike, str]],
             text_encoder_id: Optional[str] = None,
             tokenizer_id: Optional[str] = None,
-            cuda: bool=True
+            cuda: bool=True,
+            text_inversion_embedding_path: Optional[Union[PathLike, str]] = None
     ):
         self._base_model_id = base_model_id
         if isinstance(lora_weight_path, Path):
@@ -120,7 +124,8 @@ class SDImageGenerator:
             vae_weight_path,
             text_encoder_id=text_encoder_id,
             tokenizer_id=tokenizer_id,
-            cuda=cuda
+            cuda=cuda,
+            text_inversion_embedding_path=text_inversion_embedding_path
         )
 
     def generate_images(
