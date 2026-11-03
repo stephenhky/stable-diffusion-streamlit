@@ -71,9 +71,16 @@ def generate_image(
         generator = torch.Generator("cuda").manual_seed(seed)
 
     # conditioning embedding
-    compel = Compel(tokenizer=stable_diffusion_pipeline.tokenizer, text_encoder=stable_diffusion_pipeline.text_encoder)
+    compel = Compel(
+        tokenizer=stable_diffusion_pipeline.tokenizer,
+        text_encoder=stable_diffusion_pipeline.text_encoder,
+        truncate_long_prompts=False
+    )
     positive_prompt_embeds = compel(positive_prompt)
     negative_prompt_embeds = compel(negative_prompt)
+    [positive_prompt_embeds, negative_prompt_embeds] = compel.pad_conditioning_tensors_to_same_length(
+        [positive_prompt_embeds, negative_prompt_embeds]
+    )
 
     sd_output = stable_diffusion_pipeline(
         # prompt=positive_prompt,
